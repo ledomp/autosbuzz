@@ -1,0 +1,307 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Time Game – F1</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      color: black;
+    }
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    #startLight {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    #goButton {
+      position: absolute;
+      left: 39.6%;
+      top: 50%;
+      width: 21%;
+      display: none;
+      z-index: 2;
+      cursor: pointer;
+    }
+    #startGame {
+      position: absolute;
+      top: 70%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 24px 48px;
+      font-size: 2.2rem;
+      background-color: #e7b6f6;
+      color: #7a4277;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: block;
+      z-index: 3;
+    }
+    #infoText {
+  top: 5%;
+
+      position: absolute;
+      top: 42%;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: #1f4447;
+      color: #b1f2b3;
+      font-size: 1.8rem;
+      border-radius: 10px;
+      z-index: 3;
+    }
+    #info {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 2rem;
+      z-index: 3;
+      color: black;
+    }
+    #formContainer {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #leaderboard {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 5;
+      width: 100vw;
+      height: 100vh;
+      background: #1f4447;
+      color: #b1f2b3;
+      font-size: 2rem;
+      padding-top: 50px;
+      font-family: 'Space Grotesk', sans-serif;
+      text-align: center;
+    }
+    #scoresList {
+      display: inline-block;
+      text-align: left;
+      padding-left: 0;
+    }
+    #scoresList li {
+      list-style-position: inside;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <img id="startLight" src="ipad5.png" alt="start" />
+    <img id="adminLogo" src="kaisa.png" alt="Kaisa" style="position:absolute;top:10px;left:10px;width:80px;height:auto;z-index:10;cursor:pointer;" />
+    <img id="goButton" src="knapp.png" alt="GO button" />
+    <div id="infoText">Response time matters. Tap when the lights go out.</div>
+    <button id="startGame" style="position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%); padding: 24px 48px; font-size: 2.2rem; background-color: #e7b6f6; color: #7a4277; border: none; border-radius: 12px; cursor: pointer;">Start the game</button>
+<button id="earlyPlayAgainBtn" onclick="restartGame()" style="display: none; position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%); padding: 24px 48px; font-size: 2.2rem; background-color: #e7b6f6; color: #7a4277; border: none; border-radius: 12px; cursor: pointer;">Play again</button>
+>Start the game</button>
+    <div id="info"></div>
+    <div id="formContainer">
+      <p id="placeMessage"></p>
+      <input id="playerName" placeholder="Name" /><br /><br />
+      <input id="playerCompany" placeholder="Company" /><br /><br />
+      <button onclick="submitScore()">Submit</button>
+    </div>
+    <div id="leaderboard">
+
+<button id="playAgainBtn" onclick="restartGame()" style="position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%); padding: 24px 48px; font-size: 2.2rem; background-color: #e7b6f6; color: #7a4277; border: none; border-radius: 12px; cursor: pointer;">Play again</button>
+      <h2>Leaderboard</h2>
+      <ol id="scoresList"></ol>
+    </div>
+  </div>
+
+  <script>
+    const images = ["ipad4.png", "ipad3.png", "ipad2.png", "ipad1.png"];
+    const startLight = document.getElementById("startLight");
+    const goButton = document.getElementById("goButton");
+    const infoText = document.getElementById("infoText");
+    const info = document.getElementById("info");
+    const startGame = document.getElementById("startGame");
+    const formContainer = document.getElementById("formContainer");
+    const leaderboard = document.getElementById("leaderboard");
+    const scoresList = document.getElementById("scoresList");
+    const placeMessage = document.getElementById("placeMessage");
+
+    let gameStarted = false;
+let currentImageFile = "";
+    let canClick = false;
+    let startTime;
+    let reactionTime;
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function getScores() {
+      return JSON.parse(localStorage.getItem("f1scores") || "[]");
+    }
+
+    function saveScores(scores) {
+      localStorage.setItem("f1scores", JSON.stringify(scores));
+    }
+
+    function showLeaderboard() {
+  console.log("Leaderboard shown");
+      const scores = getScores();
+      scoresList.innerHTML = "";
+      scores.forEach((s, i) => {
+        const li = document.createElement("li");
+        li.textContent = `${s.name} (${s.company}) – ${s.time} ms`;
+        scoresList.appendChild(li);
+      });
+      leaderboard.style.display = "block";
+    }
+
+    function submitScore() {
+      const name = document.getElementById("playerName").value.trim();
+      const company = document.getElementById("playerCompany").value.trim();
+      if (!name || !company) return;
+      const scores = getScores();
+      scores.push({ name, company, time: reactionTime });
+      scores.sort((a, b) => a.time - b.time);
+      saveScores(scores.slice(0, 3));
+      formContainer.style.display = "none";
+      showLeaderboard();
+    }
+
+    async function startSequence() {
+      gameStarted = true;
+      info.textContent = "";
+      startGame.style.display = "none";
+      infoText.style.display = "none";
+      goButton.style.display = "block";
+      goButton.style.pointerEvents = "auto";
+      canClick = false;
+
+      for (let img of images) {
+        await sleep(1000);
+        startLight.src = img;
+      }
+
+      const delay = Math.random() * 3000 + 2000;
+      await sleep(delay);
+
+      startLight.src = "ipad0.png";
+      startTime = Date.now();
+      canClick = true;
+    }
+
+    goButton.addEventListener("click", () => {
+      if (canClick) {
+        reactionTime = Date.now() - startTime;
+        info.textContent = `Reaction time: ${reactionTime} ms`;
+        canClick = false;
+        gameStarted = false;
+
+        const scores = getScores();
+        if (scores.length < 3 || reactionTime < scores[scores.length - 1].time) {
+          scores.push({ name: "", company: "", time: reactionTime });
+          scores.sort((a, b) => a.time - b.time);
+          const place = scores.findIndex(s => s.time === reactionTime);
+          const placeText = ["You are in the lead!", "You came in second!", "You came in third!"][place];
+          placeMessage.innerHTML = `Wow – your response time is excellent!<br>${placeText}`;
+          formContainer.style.display = "block";
+        } else {
+          info.textContent = "Sorry, too slow. You better speed up.";
+          startGame.style.display = "block";
+        }
+            } else if (gameStarted) {
+        abortSequence = true;
+        gameStarted = false;
+        const bg = currentImageFile || "0.png";
+        window.location.href = "too_early.html?bg=" + encodeURIComponent(bg);
+      }
+    });
+
+    startGame.addEventListener("click", () => {
+      startLight.src = "ipad5.png";
+      info.textContent = "";
+      infoText.style.display = "block";
+      leaderboard.style.display = "none";
+      formContainer.style.display = "none";
+      goButton.style.display = "none";
+      startSequence();
+    });
+
+    function restartGame() {
+      leaderboard.style.display = "none";
+      startLight.src = "ipad5.png";
+      info.textContent = "";
+      infoText.style.display = "block";
+      startGame.style.display = "block";
+      goButton.style.display = "none";
+    }
+  </script>
+
+<div id="adminPrompt" style="display: none; position: absolute; top: 30%; left: 50%; transform: translateX(-50%); z-index: 9999; background: white; padding: 20px; border-radius: 10px; text-align: center;">
+  <p>Enter admin code:</p>
+  <input id="adminCode" type="password" />
+  <br /><br />
+  <button onclick="checkAdminCode()">Submit</button>
+</div>
+</body>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  let adminLogoClicks = 0;
+  const adminLogo = document.getElementById("adminLogo");
+  const adminPrompt = document.getElementById("adminPrompt");
+  const adminCode = document.getElementById("adminCode");
+
+  if (adminLogo) {
+    adminLogo.addEventListener("click", () => {
+      adminLogoClicks++;
+      if (adminLogoClicks === 3) {
+        adminPrompt.style.display = "block";
+        adminLogoClicks = 0;
+      }
+    });
+  }
+});
+
+function checkAdminCode() {
+  const adminCode = document.getElementById("adminCode");
+  const adminPrompt = document.getElementById("adminPrompt");
+  if (adminCode.value === "4567") {
+    if (confirm("Clear leaderboard?")) {
+      localStorage.removeItem("f1scores");
+      alert("Leaderboard cleared!");
+      location.reload();
+    } else {
+      adminPrompt.style.display = "none";
+    }
+  } else {
+    alert("Incorrect code.");
+    adminPrompt.style.display = "none";
+  }
+}
+</script>
+</html>
+
